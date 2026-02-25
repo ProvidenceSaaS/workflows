@@ -83,11 +83,11 @@ jobs:
             '{commands: [
               "set -e",
               (if $pre != "" then $pre else "true" end),
-              ("aws ecr get-login-password --region " + $region + " | docker login --username AWS --password-stdin $(aws sts get-caller-identity --query Account --output text).dkr.ecr." + $region + ".amazonaws.com"),
-              ("docker pull " + $image),
               ("docker stop " + $name + " 2>/dev/null || true"),
               ("docker rm " + $name + " 2>/dev/null || true"),
               "docker image prune -af 2>/dev/null || true",
+              ("aws ecr get-login-password --region " + $region + " | docker login --username AWS --password-stdin $(aws sts get-caller-identity --query Account --output text).dkr.ecr." + $region + ".amazonaws.com"),
+              ("docker pull " + $image),
               ("docker run -d --name " + $name + " --restart unless-stopped -p " + $hp + ":" + $cp + " " + $env + " " + $image)
             ]}')
 
