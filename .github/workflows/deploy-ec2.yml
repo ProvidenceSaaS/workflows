@@ -87,6 +87,7 @@ jobs:
               ("docker pull " + $image),
               ("docker stop " + $name + " 2>/dev/null || true"),
               ("docker rm " + $name + " 2>/dev/null || true"),
+              "docker image prune -af 2>/dev/null || true",
               ("docker run -d --name " + $name + " --restart unless-stopped -p " + $hp + ":" + $cp + " " + $env + " " + $image)
             ]}')
 
