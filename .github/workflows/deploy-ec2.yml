@@ -30,6 +30,11 @@ on:
         required: false
         type: string
         default: "3000"
+      docker_env:
+        description: "Docker env vars to pass (e.g. '-e KEY=val -e KEY2=val2')"
+        required: false
+        type: string
+        default: ""
       cloudfront_distribution_id:
         description: "CloudFront distribution ID to invalidate after deploy"
         required: false
@@ -59,6 +64,7 @@ jobs:
           HOST_PORT: ${{ inputs.host_port }}
           CONTAINER_PORT: ${{ inputs.container_port }}
           REGION: ${{ inputs.aws_region }}
+          DOCKER_ENV: ${{ inputs.docker_env }}
         run: |
           COMMANDS=$(jq -nc \
             --arg region "$REGION" \
@@ -66,13 +72,14 @@ jobs:
             --arg name "$CONTAINER" \
             --arg hp "$HOST_PORT" \
             --arg cp "$CONTAINER_PORT" \
+            --arg env "$DOCKER_ENV" \
             '{commands: [
               "set -e",
               ("aws ecr get-login-password --region " + $region + " | docker login --username AWS --password-stdin $(aws sts get-caller-identity --query Account --output text).dkr.ecr." + $region + ".amazonaws.com"),
               ("docker pull " + $image),
               ("docker stop " + $name + " 2>/dev/null || true"),
               ("docker rm " + $name + " 2>/dev/null || true"),
-              ("docker run -d --name " + $name + " --restart unless-stopped -p " + $hp + ":" + $cp + " " + $image)
+              ("docker run -d --name " + $name + " --restart unless-stopped -p " + $hp + ":" + $cp + " " + $env + " " + $image)
             ]}')
 
           COMMAND_ID=$(aws ssm send-command \
