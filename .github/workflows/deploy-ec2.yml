@@ -45,6 +45,10 @@ on:
         required: false
         type: string
         default: ""
+    secrets:
+      docker_env_secrets:
+        description: "Secret env vars for docker run (e.g. '-e KEY=val -e KEY2=val2')"
+        required: false
 
 permissions:
   id-token: write
@@ -69,7 +73,7 @@ jobs:
           HOST_PORT: ${{ inputs.host_port }}
           CONTAINER_PORT: ${{ inputs.container_port }}
           REGION: ${{ inputs.aws_region }}
-          DOCKER_ARGS: ${{ inputs.docker_args }}
+          DOCKER_ARGS: ${{ inputs.docker_args }} ${{ secrets.docker_env_secrets }}
           PRE_COMMANDS: ${{ inputs.pre_commands }}
         run: |
           COMMANDS=$(jq -nc \
