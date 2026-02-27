@@ -46,6 +46,9 @@ on:
         type: string
         default: ""
     secrets:
+      AWS_ROLE_TO_ASSUME:
+        description: "IAM role ARN for OIDC authentication"
+        required: true
       docker_env_secrets:
         description: "Secret env vars for docker run (e.g. '-e KEY=val -e KEY2=val2')"
         required: false
