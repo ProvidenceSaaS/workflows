@@ -146,10 +146,36 @@ jobs:
       - name: Summarize Trivy findings
         if: always()
         run: |
+          echo "Vulnerabilities found (CRITICAL/HIGH):"
+          echo ""
+          jq -r '
+            ["SEVERITY","PACKAGE","INSTALLED","FIXED","CVE"],
+            (
+              [.Results[]? | select(.Vulnerabilities) | .Vulnerabilities[]?]
+              | sort_by(if .Severity == "CRITICAL" then 0 else 1 end)
+              | .[]
+              | [.Severity, .PkgName, .InstalledVersion, (.FixedVersion // "-"), .VulnerabilityID]
+            )
+            | @tsv
+          ' trivy-results.json 2>/dev/null | column -t -s $'\t' || echo "No parseable findings"
+
           CRITICAL=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' trivy-results.json 2>/dev/null || echo "?")
           HIGH=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="HIGH")] | length' trivy-results.json 2>/dev/null || echo "?")
           echo "TRIVY_CRITICAL=$CRITICAL" >> "$GITHUB_ENV"
           echo "TRIVY_HIGH=$HIGH" >> "$GITHUB_ENV"
+
+          {
+            echo "### Trivy Vulnerabilities (CRITICAL/HIGH)"
+            echo ""
+            echo "| Severity | Package | Installed | Fixed | CVE |"
+            echo "|---|---|---|---|---|"
+            jq -r '
+              [.Results[]? | select(.Vulnerabilities) | .Vulnerabilities[]?]
+              | sort_by(if .Severity == "CRITICAL" then 0 else 1 end)
+              | .[]
+              | "| \(.Severity) | \(.PkgName) | \(.InstalledVersion) | \(.FixedVersion // "-") | \(.VulnerabilityID) |"
+            ' trivy-results.json 2>/dev/null
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Summary
         run: |
