@@ -53,7 +53,6 @@ on:
 permissions:
   id-token: write
   contents: read
-  security-events: write
 
 jobs:
   build-push:
@@ -128,19 +127,29 @@ jobs:
           echo "image_digest=${{ steps.build.outputs.digest }}" >> "$GITHUB_OUTPUT"
 
       - name: Scan image with Trivy
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ steps.meta.outputs.primary_tag }}
-          format: "sarif"
-          output: "trivy-results.sarif"
+          format: "json"
+          output: "trivy-results.json"
           severity: "CRITICAL,HIGH"
           exit-code: "0"
 
       - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
-          sarif_file: "trivy-results.sarif"
+          name: trivy-results-${{ inputs.ecr_repo_name }}-${{ github.sha }}
+          path: trivy-results.json
+          retention-days: 30
+
+      - name: Summarize Trivy findings
+        if: always()
+        run: |
+          CRITICAL=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' trivy-results.json 2>/dev/null || echo "?")
+          HIGH=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="HIGH")] | length' trivy-results.json 2>/dev/null || echo "?")
+          echo "TRIVY_CRITICAL=$CRITICAL" >> "$GITHUB_ENV"
+          echo "TRIVY_HIGH=$HIGH" >> "$GITHUB_ENV"
 
       - name: Summary
         run: |
@@ -151,4 +160,5 @@ jobs:
           echo "| **Image** | \`${{ steps.meta.outputs.primary_tag }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| **Digest** | \`${{ steps.build.outputs.digest }}\` |" >> "$GITHUB_STEP_SUMMARY"
           echo "| **Environment** | \`${{ inputs.environment }}\` |" >> "$GITHUB_STEP_SUMMARY"
-          echo "| **Trivy scan** | [View results](../security/code-scanning) |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Trivy: CRITICAL** | ${{ env.TRIVY_CRITICAL }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Trivy: HIGH** | ${{ env.TRIVY_HIGH }} |" >> "$GITHUB_STEP_SUMMARY"
