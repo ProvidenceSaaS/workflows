@@ -1,0 +1,57 @@
+name: OWASP ZAP Baseline Scan
+
+on:
+  workflow_call:
+    inputs:
+      target:
+        description: "URL to scan"
+        required: true
+        type: string
+      cmd_options:
+        description: "Extra ZAP CLI options (e.g. '-a' for AJAX spider)"
+        required: false
+        type: string
+        default: "-a"
+      rules_file_name:
+        description: "Path to a .tsv file to ignore/downgrade specific alert rules"
+        required: false
+        type: string
+        default: ""
+      fail_action:
+        description: "Fail the job if ZAP finds WARN/FAIL alerts"
+        required: false
+        type: boolean
+        default: false
+      artifact_name:
+        description: "Name for the uploaded report artifact"
+        required: false
+        type: string
+        default: "zap-scan-results"
+
+permissions:
+  contents: read
+
+jobs:
+  zap-scan:
+    name: ZAP Baseline Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: ZAP Baseline Scan
+        uses: zaproxy/action-baseline@v0.14.0
+        with:
+          target: ${{ inputs.target }}
+          cmd_options: ${{ inputs.cmd_options }}
+          rules_file_name: ${{ inputs.rules_file_name }}
+          allow_issue_writing: false
+          fail_action: ${{ inputs.fail_action }}
+          artifact_name: ${{ inputs.artifact_name }}
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### OWASP ZAP Baseline Scan :shield:" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| Field | Value |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|-------|-------|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Target** | \`${{ inputs.target }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Report artifact** | \`${{ inputs.artifact_name }}\` |" >> "$GITHUB_STEP_SUMMARY"
